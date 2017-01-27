@@ -114,9 +114,7 @@ public class SeriousVote
     ///////////////////////////////////////////////////////
     public String databaseName, databaseHostname,databasePort,databasePrefix,databaseUsername,databasePassword;
     ///////////////////////////////////////////////////////
-    private LinkedList<String> commandQueue = new LinkedList<String>();
-    private LinkedList<String> executingQueue = new LinkedList<String>();
-
+    private List<String> commandQueue = Collections.synchronizedList(new LinkedList<String>());
 
     LinkedHashMap<Integer, List<Map<String, String>>> lootMap = new LinkedHashMap<Integer, List<Map<String,String>>>();
     HashMap<UUID,Integer> storedVotes = new HashMap<UUID,Integer>();
@@ -545,15 +543,13 @@ public class SeriousVote
     //////////////////////////////ACTION METHODS///////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////
     public boolean giveReward(){
-        //Execute Commands
-        //executingQueue = commandQueue;
-        commandQueue = new LinkedList<String>();
-
-        for (String command: executingQueue)
+        Iterator i = commandQueue.iterator();
+        for(String command:commandQueue)
         {
-            game.getCommandManager().process(game.getServer().getConsole(), command);
+            game.getCommandManager().process(game.getServer().getConsole(),command );
         }
-        executingQueue = null;
+        commandQueue.clear();
+
         return true;
 
     }
@@ -571,7 +567,7 @@ public class SeriousVote
 
     public boolean giveVote(String username){
         currentRewards = "";
-        ArrayList<String> commandQueue = new ArrayList<String>();
+        //ArrayList<String> commandQueue = new ArrayList<String>();
         if(hasLoot && !isNoRandom && randomRewardsNumber >= 1) {
             for (int i = 0; i < randomRewardsNumber; i++) {
                 U.info("Choosing a random reward.");
@@ -591,7 +587,7 @@ public class SeriousVote
 
 
         if (isOnline(username)) {
-            giveReward(commandQueue);
+            giveReward();
             if(!(milestones == null)){
                 milestones.addVote(game.getServer().getPlayer(username).get().getUniqueId());
             }
