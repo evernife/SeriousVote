@@ -60,6 +60,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 
@@ -219,8 +220,8 @@ public class SeriousVote
     {
         Scheduler scheduler = Sponge.getScheduler();
         Task.Builder taskBuilder = scheduler.createTaskBuilder();
-        Task task = taskBuilder.execute(() -> executeCommands())
-                .delay(1000, TimeUnit.MILLISECONDS)
+        Task task = taskBuilder.execute(new ExecuteCommands())
+                .interval(1000, TimeUnit.MILLISECONDS)
                 .name("SeriousVote-CommandRewardExecutor")
                 .submit(plugin);
     }
@@ -545,16 +546,18 @@ public class SeriousVote
     ///////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////ACTION METHODS///////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////
-    public boolean executeCommands(){
-        U.info("Execting Commands");
-        for(String command:commandQueue)
-        {
-            game.getCommandManager().process(game.getServer().getConsole(),command );
-        }
-        commandQueue.clear();
+    private class ExecuteCommands implements Consumer<Task> {
+        public void accept(Task task){
 
-        return true;
+            for(String command:commandQueue)
+            {
+                game.getCommandManager().process(game.getServer().getConsole(),command );
+            }
+            commandQueue.clear();
+
+        }
     }
+
 
     public void addCommands(List<String> commandList){
         for(String command:commandList){
