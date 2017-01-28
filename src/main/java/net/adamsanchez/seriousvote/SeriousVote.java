@@ -187,7 +187,7 @@ public class SeriousVote
         //Begin Command Executor
         Scheduler scheduler = Sponge.getScheduler();
         Task.Builder taskBuilder = scheduler.createTaskBuilder();
-        Task task = taskBuilder.execute(() -> giveReward())
+        Task task = taskBuilder.execute(() -> executeCommands())
                 .delay(1000, TimeUnit.MILLISECONDS)
                 .name("SeriousVote-CommandRewardExecutor")
                 .submit(plugin);
@@ -544,7 +544,7 @@ public class SeriousVote
     ///////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////ACTION METHODS///////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////
-    public boolean giveReward(){
+    public boolean executeCommands(){
         Iterator i = commandQueue.iterator();
         for(String command:commandQueue)
         {
