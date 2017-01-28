@@ -53,20 +53,20 @@ public class Milestones {
             for(String command:sv.yearlySet) {
                 commandList.add(sv.parseVariables(command, playerName));
             }
-            sv.giveReward(commandList);
+            sv.addCommands(commandList);
 
         }
         else if(record.getVoteSpree() >= 30 && record.getVoteSpree()%30 == 0){
             for(String command:sv.monthlySet) {
                 commandList.add(sv.parseVariables(command, playerName));
             }
-            sv.giveReward(commandList);
+            sv.addCommands(commandList);
         }
         else if(record.getVoteSpree() >= 7 && record.getVoteSpree()%7 == 0){
             for(String command:sv.weeklySet) {
                 commandList.add(sv.parseVariables(command, playerName));
             }
-            sv.giveReward(commandList);
+            sv.addCommands(commandList);
         }
 
 

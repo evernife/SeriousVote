@@ -177,20 +177,13 @@ public class SeriousVote
                 //getLogger().error(e.toString());
             }
         }
-
-
-
         currentRewards = "";
+
 
         reloadConfigs();
 
         //Begin Command Executor
-        Scheduler scheduler = Sponge.getScheduler();
-        Task.Builder taskBuilder = scheduler.createTaskBuilder();
-        Task task = taskBuilder.execute(() -> executeCommands())
-                .delay(1000, TimeUnit.MILLISECONDS)
-                .name("SeriousVote-CommandRewardExecutor")
-                .submit(plugin);
+
 
 
 
@@ -222,8 +215,14 @@ public class SeriousVote
 
     @Listener
     public void onPostInit(GamePostInitializationEvent event)
-    {
 
+    {
+        Scheduler scheduler = Sponge.getScheduler();
+        Task.Builder taskBuilder = scheduler.createTaskBuilder();
+        Task task = taskBuilder.execute(() -> executeCommands())
+                .delay(1000, TimeUnit.MILLISECONDS)
+                .name("SeriousVote-CommandRewardExecutor")
+                .submit(plugin);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -527,7 +526,9 @@ public class SeriousVote
         String username = event.getTargetEntity().getName();
 
         if(storedVotes.containsKey(playerID)){
+
             broadCastMessage(publicMessage, username);
+            event.getTargetEntity().sendMessage(Text.of("Thanks for voting! Here are your rewards!").toBuilder().color(TextColors.AQUA).build());
 
             for(int ix = 0; ix < storedVotes.get(playerID).intValue(); ix ++){
                 giveVote(username);
@@ -545,7 +546,7 @@ public class SeriousVote
     //////////////////////////////ACTION METHODS///////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////
     public boolean executeCommands(){
-        Iterator i = commandQueue.iterator();
+        U.info("Execting Commands");
         for(String command:commandQueue)
         {
             game.getCommandManager().process(game.getServer().getConsole(),command );
@@ -553,44 +554,38 @@ public class SeriousVote
         commandQueue.clear();
 
         return true;
-
     }
-    public boolean giveReward(List<String> commands){
-        //Execute Commands
 
-        for (String command: commands)
-        {
+    public void addCommands(List<String> commandList){
+        for(String command:commandList){
             commandQueue.add(command);
         }
 
-        return true;
-
     }
+
 
     public boolean giveVote(String username){
 
-        currentRewards = "";
-        ArrayList<String> commandQueue = new ArrayList<String>();
-        if(hasLoot && !isNoRandom && randomRewardsNumber >= 1) {
-            for (int i = 0; i < randomRewardsNumber; i++) {
-                U.info("Choosing a random reward.");
-                commandQueue.add(chooseReward(username));
-            }
-        } else if(hasLoot && !isNoRandom){
-            randomRewardsGen = generateRandomRewardNumber();
-            for (int i = 0; i < randomRewardsGen; i++) {
-                U.info("Choosing a random reward.");
-                commandQueue.add(chooseReward(username));
-            }
-        }
-        //Get Set Rewards
-        for(String setCommand: setCommands){
-            commandQueue.add(parseVariables(setCommand, username, currentRewards));
-        }
-
 
         if (isOnline(username)) {
-            giveReward(commandQueue);
+            currentRewards = "";
+            if(hasLoot && !isNoRandom && randomRewardsNumber >= 1) {
+                for (int i = 0; i < randomRewardsNumber; i++) {
+                    U.info("Choosing a random reward.");
+                    commandQueue.add(chooseReward(username));
+                }
+            } else if(hasLoot && !isNoRandom){
+                randomRewardsGen = generateRandomRewardNumber();
+                for (int i = 0; i < randomRewardsGen; i++) {
+                    U.info("Choosing a random reward.");
+                    commandQueue.add(chooseReward(username));
+                }
+            }
+            //Get Set Rewards
+            for(String setCommand: setCommands){
+                commandQueue.add(parseVariables(setCommand, username, currentRewards));
+            }
+
             if(!(milestones == null)){
                 milestones.addVote(game.getServer().getPlayer(username).get().getUniqueId());
             }
@@ -670,7 +665,6 @@ public class SeriousVote
         } else if(currentRewards == "") {
             return string.replace("{player}",username).replace("{rewards}", "No Random Rewards");
         }
-        U.info("Player " + username + " voted and received " + currentRewards);
         return string.replace("{player}",username).replace("{rewards}", currentRewards.substring(0,currentRewards.length() -2));
     }
 
