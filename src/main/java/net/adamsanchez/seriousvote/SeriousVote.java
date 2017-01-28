@@ -138,7 +138,8 @@ public class SeriousVote
         instance = this;
         userStorage = Sponge.getServiceManager().provide(UserStorageService.class);
 
-        getLogger().info("Serious Vote loading...");
+        //getLogger().info("Serious Vote loading...");
+        game.getServer().getConsole().sendMessage(Text.of("Loading Serious Servers").toBuilder().color(TextColors.GOLD).build());
         getLogger().info("Trying To setup Config Loader");
 
         Asset configAsset = plugin.getAsset("seriousvote.conf").orElse(null);
@@ -206,7 +207,8 @@ public class SeriousVote
     {
         seriousVotePlugin = this;
         registerCommands();
-        getLogger().info("Serious Vote Has Loaded\n\n\n\n");
+        game.getServer().getConsole().sendMessage(Text.of("SeriousVote has Loaded Successfully").toBuilder().color(TextColors.GOLD).build());
+        game.getServer().getConsole().sendMessage(Text.of("Running Version 3.0 or something like that" ).toBuilder().color(TextColors.GREEN).build());
 
         if(!(databaseHostname=="" || databaseHostname == null)){
             milestones = new Milestones();
