@@ -560,7 +560,7 @@ public class SeriousVote
 
         for (String command: commands)
         {
-            game.getCommandManager().process(game.getServer().getConsole(), command);
+            commandQueue.add(command);
         }
 
         return true;
@@ -568,8 +568,9 @@ public class SeriousVote
     }
 
     public boolean giveVote(String username){
+
         currentRewards = "";
-        //ArrayList<String> commandQueue = new ArrayList<String>();
+        ArrayList<String> commandQueue = new ArrayList<String>();
         if(hasLoot && !isNoRandom && randomRewardsNumber >= 1) {
             for (int i = 0; i < randomRewardsNumber; i++) {
                 U.info("Choosing a random reward.");
@@ -589,7 +590,7 @@ public class SeriousVote
 
 
         if (isOnline(username)) {
-            giveReward();
+            giveReward(commandQueue);
             if(!(milestones == null)){
                 milestones.addVote(game.getServer().getPlayer(username).get().getUniqueId());
             }
@@ -597,6 +598,7 @@ public class SeriousVote
         }
         else
         {
+            U.info("Player was not online, saving vote for later use.");
             UUID playerID;
 
             if(userStorage.get().get(username).isPresent()){
