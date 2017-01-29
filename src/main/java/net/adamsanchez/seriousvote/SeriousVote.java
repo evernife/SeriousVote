@@ -108,14 +108,16 @@ public class SeriousVote
     @ConfigDir(sharedRoot = false)
     private Path privateConfigDir;
     private CommentedConfigurationNode rootNode;
-
+    private ConfigManager cm;
     ///////////////////////////////////////////////////////
     private Milestones milestones;
     public List<String> monthlySet, yearlySet, weeklySet;
+    private boolean milestonesEnabled;
     ///////////////////////////////////////////////////////
     public String databaseName, databaseHostname,databasePort,databasePrefix,databaseUsername,databasePassword;
     ///////////////////////////////////////////////////////
-    private List<String> commandQueue = Collections.synchronizedList(new LinkedList<String>());
+    private List<String> commandQueue = new LinkedList<String>();
+    LinkedList<Vote> voteQueue = new LinkedList<Vote>();
 
     LinkedHashMap<Integer, List<Map<String, String>>> lootMap = new LinkedHashMap<Integer, List<Map<String,String>>>();
     HashMap<UUID,Integer> storedVotes = new HashMap<UUID,Integer>();
@@ -123,6 +125,7 @@ public class SeriousVote
     int rewardsMin;
     int rewardsMax;
     int randomRewardsGen;
+    List<String> voteSites;
     List<String> setCommands;
     List<Integer> chanceMap;
     String currentRewards;
@@ -147,10 +150,6 @@ public class SeriousVote
         Asset offlineVoteAsset = plugin.getAsset("offlinevotes.dat").orElse(null);
 
         offlineVotes = Paths.get(privateConfigDir.toString(),"", "offlinevotes.dat");
-
-
-
-
 
         if (Files.notExists(defaultConfig)) {
             if (configAsset != null) {
@@ -180,13 +179,8 @@ public class SeriousVote
         }
         currentRewards = "";
 
-
+        cm = new ConfigManager(rootNode);
         reloadConfigs();
-
-        //Begin Command Executor
-
-
-
 
     }
 
@@ -204,13 +198,11 @@ public class SeriousVote
         game.getServer().getConsole().sendMessage(Text.of("SeriousVote has Loaded Successfully").toBuilder().color(TextColors.GOLD).build());
         game.getServer().getConsole().sendMessage(Text.of("Running Version 3.0 or something like that" ).toBuilder().color(TextColors.GREEN).build());
 
-        if(!(databaseHostname=="" || databaseHostname == null)){
+        if(milestonesEnabled){
             milestones = new Milestones();
         } else {
             milestones = null;
         }
-
-
 
     }
 
@@ -220,7 +212,7 @@ public class SeriousVote
     {
         Scheduler scheduler = Sponge.getScheduler();
         Task.Builder taskBuilder = scheduler.createTaskBuilder();
-        Task task = taskBuilder.execute(new ExecuteCommands())
+        Task task = taskBuilder.execute(() -> processVotes())
                 .interval(1000, TimeUnit.MILLISECONDS)
                 .name("SeriousVote-CommandRewardExecutor")
                 .submit(plugin);
@@ -290,7 +282,7 @@ public class SeriousVote
         public CommandResult execute(CommandSource src, CommandContext args) throws
                 CommandException {
             src.sendMessage(Text.of("Thank You! Below are the places you can vote!").toBuilder().color(TextColors.GOLD).build());
-            getVoteSites(rootNode).forEach(site -> {
+            voteSites.forEach(site -> {
                 src.sendMessage(convertLink(site));
             });
             return CommandResult.success();
@@ -315,14 +307,18 @@ public class SeriousVote
         }
 
         //update variables and other instantiations
-        publicMessage = getPublicMessage(rootNode);
-        randomRewardsNumber = getRewardsNumber(rootNode);
+        publicMessage = cm.getPublicMessage(rootNode);
+        randomRewardsNumber = cm.getRewardsNumber(rootNode);
+        rewardsMax = cm.getMaxRewardsNumber(rootNode);
+        rewardsMin = cm.getMinRewardsNumber(rootNode);
+        isNoRandom = cm.getIsNoRandom(rootNode);
 
-        updateLoot(getRandomCommands(rootNode));
+        voteSites = cm.getVoteSites(rootNode);
+        updateLoot(cm.getRandomCommands(rootNode));
         buildChanceMap();
-        setCommands = getSetCommands(rootNode);
+        setCommands = cm.getSetCommands(rootNode);
         U.debug("Here's your commands");
-        for(String ix : getRandomCommands(rootNode)){
+        for(String ix : cm.getRandomCommands(rootNode)){
             U.debug(ix);
         }
 
@@ -338,96 +334,27 @@ public class SeriousVote
         }
 
         //Reload DB configuration
-        databaseHostname = getDatabaseHostname(rootNode);
-        databaseName = getDatabaseName(rootNode);
-        databasePassword = getDatabasePassword(rootNode);
-        databasePrefix = getDatabasePrefix(rootNode);
-        databaseUsername = getDatabaseUsername(rootNode);
-        databasePort = getDatabasePort(rootNode);
+        databaseHostname = cm.getDatabaseHostname(rootNode);
+        databaseName = cm.getDatabaseName(rootNode);
+        databasePassword = cm.getDatabasePassword(rootNode);
+        databasePrefix = cm.getDatabasePrefix(rootNode);
+        databaseUsername = cm.getDatabaseUsername(rootNode);
+        databasePort = cm.getDatabasePort(rootNode);
 
-        if (milestones != null){
-            milestones.reloadDB();
-
+        if (milestonesEnabled){
+            milestones = new Milestones();
+        } else {
+            milestones = null;
         }
         /////////Load Up Milestones/////////
-        monthlySet = getMonthlySetCommands(rootNode);
-        yearlySet = getYearlySetCommands(rootNode);
-        weeklySet = getWeeklySetCommands(rootNode);
+        monthlySet = cm.getMonthlySetCommands(rootNode);
+        yearlySet = cm.getYearlySetCommands(rootNode);
+        weeklySet = cm.getWeeklySetCommands(rootNode);
 
 
         return true;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////
-    private List<String> getWeeklySetCommands(ConfigurationNode node){
-        return node.getNode("config","milestones","weekly","set").getChildrenList().stream()
-                .map(ConfigurationNode::getString).collect(Collectors.toList());
-    }
-    private List<String> getMonthlySetCommands(ConfigurationNode node){
-        return node.getNode("config","milestones","monthly","set").getChildrenList().stream()
-                .map(ConfigurationNode::getString).collect(Collectors.toList());
-    }
-    private List<String> getYearlySetCommands(ConfigurationNode node){
-        return node.getNode("config","milestones","yearly","set").getChildrenList().stream()
-                .map(ConfigurationNode::getString).collect(Collectors.toList());
-    }
-    ///////////////////////////////////////////////////////////////////////////////////////////
-    private String getDatabaseName(ConfigurationNode node){
-        return node.getNode("config","database","name").getString();
-    }
-    private String getDatabaseHostname(ConfigurationNode node){
-        return node.getNode("config","database","hostname").getString();
-    }
-    private String getDatabasePort(ConfigurationNode node){
-        return node.getNode("config","database","port").getString();
-    }
-    private String getDatabasePrefix(ConfigurationNode node){
-        return node.getNode("config","database","prefix").getString();
-    }
-    private String getDatabaseUsername(ConfigurationNode node){
-        return node.getNode("config","database","username").getString();
-    }
-    private String getDatabasePassword(ConfigurationNode node){
-        return node.getNode("config","database","password").getString();
-    }
-
-
-
-
-
-
-
-
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////
-
-
-    private List<String> getSetCommands(ConfigurationNode node) {
-        return node.getNode("config","Rewards","set").getChildrenList().stream()
-                .map(ConfigurationNode::getString).collect(Collectors.toList());
-    }
-    private List<String> getRandomCommands(ConfigurationNode node) {
-           return node.getNode("config","Rewards","random").getChildrenList().stream()
-                   .map(ConfigurationNode::getString).collect(Collectors.toList());
-    }
-    private List<String> getVoteSites(ConfigurationNode node) {
-        //TODO code potentially breaking here -- investigate
-        return node.getNode("config","vote-sites").getChildrenList().stream()
-                .map(ConfigurationNode::getString).collect(Collectors.toList());
-    }
-
-    //Returns the string value from the Config for the public message. This must be deserialized
-    private String getPublicMessage(ConfigurationNode node){
-        return node.getNode("config","broadcast-message").getString();
-    }
-    private int getRewardsNumber(ConfigurationNode node){
-         int number = node.getNode("config", "random-rewards-number").getInt();
-         isNoRandom = number == 0? true:false;
-         rewardsMin = node.getNode("config", "rewards-min").getInt();
-         rewardsMax = node.getNode("config", "rewards-max").getInt() + 1;
-        return number;
-    }
 
     public int generateRandomRewardNumber(){
         int nextInt;
@@ -509,16 +436,37 @@ public class SeriousVote
     public void onVote(VotifierEvent event)
     {
         Vote vote = event.getVote();
-        String username = vote.getUsername();
-        U.info("Vote Registered From " +vote.getServiceName() + " for "+ username);
 
-        giveVote(username);
-
-        if(isOnline(username)) {
-            broadCastMessage(publicMessage, username);
+        synchronized (voteQueue){
+            voteQueue.add(vote);
         }
 
+    }
 
+
+    public void processVotes(){
+        if(!voteQueue.isEmpty()) {
+            LinkedList<Vote> localQueue;
+            synchronized (voteQueue) {
+                localQueue = voteQueue;
+                voteQueue.clear();
+            }
+            for (Vote vote : localQueue) {
+                String username = vote.getUsername();
+                U.info("Vote Registered From " + vote.getServiceName() + " for " + username);
+
+                giveVote(username);
+
+                if (isOnline(username)) {
+                    broadCastMessage(publicMessage, username);
+                }
+
+                if (milestonesEnabled) {
+                    milestones.addVote(game.getServer().getPlayer(username).get().getUniqueId());
+                }
+            }
+        }
+        executeCommands();
     }
 
     @Listener
@@ -546,17 +494,17 @@ public class SeriousVote
     ///////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////ACTION METHODS///////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////
-    private class ExecuteCommands implements Consumer<Task> {
-        public void accept(Task task){
+    public void executeCommands(){
 
-            for(String command:commandQueue)
-            {
-                game.getCommandManager().process(game.getServer().getConsole(),command );
-            }
-            commandQueue.clear();
-
+        for(String command:commandQueue)
+        {
+            game.getCommandManager().process(game.getServer().getConsole(),command );
         }
+        commandQueue.clear();
+
     }
+
+
 
 
     public void addCommands(List<String> commandList){
@@ -568,7 +516,6 @@ public class SeriousVote
 
 
     public boolean giveVote(String username){
-
 
         if (isOnline(username)) {
             currentRewards = "";
@@ -589,9 +536,6 @@ public class SeriousVote
                 commandQueue.add(parseVariables(setCommand, username, currentRewards));
             }
 
-            if(!(milestones == null)){
-                milestones.addVote(game.getServer().getPlayer(username).get().getUniqueId());
-            }
 
         }
         else

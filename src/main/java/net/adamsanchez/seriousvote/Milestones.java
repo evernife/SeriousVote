@@ -56,13 +56,13 @@ public class Milestones {
             sv.addCommands(commandList);
 
         }
-        else if(record.getVoteSpree() >= 30 && record.getVoteSpree()%30 == 0){
+        if(record.getVoteSpree() >= 30 && record.getVoteSpree()%30 == 0){
             for(String command:sv.monthlySet) {
                 commandList.add(sv.parseVariables(command, playerName));
             }
             sv.addCommands(commandList);
         }
-        else if(record.getVoteSpree() >= 7 && record.getVoteSpree()%7 == 0){
+        if(record.getVoteSpree() >= 7 && record.getVoteSpree()%7 == 0){
             for(String command:sv.weeklySet) {
                 commandList.add(sv.parseVariables(command, playerName));
             }
