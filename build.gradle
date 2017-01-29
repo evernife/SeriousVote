@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'SeriousVote'
-version '3.2-Bleeding-C'
+version '3.2-Bleeding-D'
 description 'Seriously We Have TO VOTE'
 
 

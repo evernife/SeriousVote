@@ -143,7 +143,7 @@ public class SeriousVote
         userStorage = Sponge.getServiceManager().provide(UserStorageService.class);
 
         //getLogger().info("Serious Vote loading...");
-        game.getServer().getConsole().sendMessage(Text.of("Loading Serious Servers").toBuilder().color(TextColors.GOLD).build());
+        game.getServer().getConsole().sendMessage(Text.of("Loading Serious Vote").toBuilder().color(TextColors.AQUA).build());
         getLogger().info("Trying To setup Config Loader");
 
         Asset configAsset = plugin.getAsset("seriousvote.conf").orElse(null);
@@ -445,12 +445,13 @@ public class SeriousVote
 
 
     public void processVotes(){
-        if(!voteQueue.isEmpty()) {
-            LinkedList<Vote> localQueue;
+                if(!voteQueue.isEmpty()) {
+            LinkedList<Vote> localQueue = new LinkedList<>();
             synchronized (voteQueue) {
-                localQueue = voteQueue;
+                localQueue.addAll(voteQueue);
                 voteQueue.clear();
             }
+
             for (Vote vote : localQueue) {
                 String username = vote.getUsername();
                 U.info("Vote Registered From " + vote.getServiceName() + " for " + username);
@@ -545,11 +546,14 @@ public class SeriousVote
 
             if(userStorage.get().get(username).isPresent()){
                 playerID = userStorage.get().get(username).get().getUniqueId();
+                U.info("Found UUID for " + username );
 
                 //Write to File
                 if(storedVotes.containsKey(playerID)) {
+                    U.debug("Found in already voted offline adding 1");
                     storedVotes.put(playerID, storedVotes.get(playerID).intValue() + 1);
                 } else {
+                    U.debug("First time offline voter");
                     storedVotes.put(playerID, new Integer(1));
                 }
                 try {
@@ -557,6 +561,8 @@ public class SeriousVote
                 } catch (IOException e) {
                     U.error("Woah did that just happen? I couldn't save that offline player's vote!", e);
                 }
+            } else {
+                U.warn("I don't think this player has ever...played here?");
             }
 
 
