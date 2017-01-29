@@ -128,7 +128,6 @@ public class SeriousVote
     List<String> voteSites;
     List<String> setCommands;
     List<Integer> chanceMap;
-    String currentRewards;
     String publicMessage;
     boolean hasLoot = false;
     boolean isNoRandom = false;
@@ -177,9 +176,6 @@ public class SeriousVote
                 //getLogger().error(e.toString());
             }
         }
-        currentRewards = "";
-
-        cm = new ConfigManager(rootNode);
         reloadConfigs();
 
     }
@@ -197,12 +193,6 @@ public class SeriousVote
         registerCommands();
         game.getServer().getConsole().sendMessage(Text.of("SeriousVote has Loaded Successfully").toBuilder().color(TextColors.GOLD).build());
         game.getServer().getConsole().sendMessage(Text.of("Running Version 3.0 or something like that" ).toBuilder().color(TextColors.GREEN).build());
-
-        if(milestonesEnabled){
-            milestones = new Milestones();
-        } else {
-            milestones = null;
-        }
 
     }
 
@@ -270,7 +260,6 @@ public class SeriousVote
 
             player.sendMessage(Text.of("An administrator has awarded you a vote!"));
             giveVote(player.getName());
-            currentRewards = "";
             src.sendMessage(Text.of("You have successfully given " + player.getName() + " a vote"));
 
 
@@ -306,6 +295,8 @@ public class SeriousVote
             return false;
         }
 
+        cm = new ConfigManager(rootNode);
+
         //update variables and other instantiations
         publicMessage = cm.getPublicMessage(rootNode);
         randomRewardsNumber = cm.getRewardsNumber(rootNode);
@@ -334,22 +325,26 @@ public class SeriousVote
         }
 
         //Reload DB configuration
-        databaseHostname = cm.getDatabaseHostname(rootNode);
-        databaseName = cm.getDatabaseName(rootNode);
-        databasePassword = cm.getDatabasePassword(rootNode);
-        databasePrefix = cm.getDatabasePrefix(rootNode);
-        databaseUsername = cm.getDatabaseUsername(rootNode);
-        databasePort = cm.getDatabasePort(rootNode);
 
+        /////////Load Up Milestones & DB Config/////////
         if (milestonesEnabled){
+            U.info("Reloading Milestones Module");
+            databaseHostname = cm.getDatabaseHostname(rootNode);
+            databaseName = cm.getDatabaseName(rootNode);
+            databasePassword = cm.getDatabasePassword(rootNode);
+            databasePrefix = cm.getDatabasePrefix(rootNode);
+            databaseUsername = cm.getDatabaseUsername(rootNode);
+            databasePort = cm.getDatabasePort(rootNode);
+            monthlySet = cm.getMonthlySetCommands(rootNode);
+            yearlySet = cm.getYearlySetCommands(rootNode);
+            weeklySet = cm.getWeeklySetCommands(rootNode);
             milestones = new Milestones();
         } else {
+            U.info("Milestones Disabled");
             milestones = null;
         }
-        /////////Load Up Milestones/////////
-        monthlySet = cm.getMonthlySetCommands(rootNode);
-        yearlySet = cm.getYearlySetCommands(rootNode);
-        weeklySet = cm.getWeeklySetCommands(rootNode);
+
+
 
 
         return true;
@@ -445,7 +440,7 @@ public class SeriousVote
 
 
     public void processVotes(){
-                if(!voteQueue.isEmpty()) {
+        if(!voteQueue.isEmpty()) {
             LinkedList<Vote> localQueue = new LinkedList<>();
             synchronized (voteQueue) {
                 localQueue.addAll(voteQueue);
@@ -458,9 +453,6 @@ public class SeriousVote
 
                 giveVote(username);
 
-                if (isOnline(username)) {
-                    broadCastMessage(publicMessage, username);
-                }
 
                 if (milestonesEnabled) {
                     milestones.addVote(game.getServer().getPlayer(username).get().getUniqueId());
@@ -477,7 +469,7 @@ public class SeriousVote
 
         if(storedVotes.containsKey(playerID)){
 
-            broadCastMessage(publicMessage, username);
+            broadCastMessage(publicMessage, username, "a bunch of things");
             event.getTargetEntity().sendMessage(Text.of("Thanks for voting! Here are your rewards!").toBuilder().color(TextColors.AQUA).build());
 
             for(int ix = 0; ix < storedVotes.get(playerID).intValue(); ix ++){
@@ -519,23 +511,26 @@ public class SeriousVote
     public boolean giveVote(String username){
 
         if (isOnline(username)) {
-            currentRewards = "";
+            String currentRewards = "";
             if(hasLoot && !isNoRandom && randomRewardsNumber >= 1) {
                 for (int i = 0; i < randomRewardsNumber; i++) {
                     U.info("Choosing a random reward.");
-                    commandQueue.add(chooseReward(username));
+                    commandQueue.add(chooseReward(username, currentRewards));
                 }
             } else if(hasLoot && !isNoRandom){
                 randomRewardsGen = generateRandomRewardNumber();
                 for (int i = 0; i < randomRewardsGen; i++) {
                     U.info("Choosing a random reward.");
-                    commandQueue.add(chooseReward(username));
+                    commandQueue.add(chooseReward(username,currentRewards));
                 }
             }
+
             //Get Set Rewards
             for(String setCommand: setCommands){
                 commandQueue.add(parseVariables(setCommand, username, currentRewards));
             }
+
+                broadCastMessage(publicMessage, username, currentRewards);
 
 
         }
@@ -577,7 +572,7 @@ public class SeriousVote
 
         return true;
     }
-    public boolean broadCastMessage(String message, String username){
+    public boolean broadCastMessage(String message, String username, String currentRewards){
         if (message.isEmpty()) return false;
         game.getServer().getBroadcastChannel().send(
                 TextSerializers.FORMATTING_CODE.deserialize(parseVariables(message, username, currentRewards)));
@@ -587,7 +582,7 @@ public class SeriousVote
 
     }
     //Chooses 1 random reward
-    public String chooseReward(String username) {
+    public String chooseReward(String username, String currentRewards) {
 
         Integer reward = chanceMap.get(ThreadLocalRandom.current().nextInt(0, chanceMap.size()));
         U.info("Chose Reward from Table" + reward.toString());

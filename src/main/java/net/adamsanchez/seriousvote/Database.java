@@ -59,6 +59,7 @@ public class Database {
         U.info("Attempting to connect to the database...");
         try {
             connection = DriverManager.getConnection("jdbc:" + dbType + "://" + host + ":" + port + "/" + dbname, username, password);
+            U.info("Database Connection Successful for jdbc:" + dbType + "://" + host + ":" + port + "/" + dbname + "User:******* PW:*********");
         } catch (SQLException e) {
             U.error("Failed to establish connection to the database", e);
         }

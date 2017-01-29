@@ -42,7 +42,7 @@ public class U {
     //////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public static void bcast(String msg, String username){
-        SeriousVote.getInstance().broadCastMessage(msg,username);
+        SeriousVote.getInstance().broadCastMessage(msg,username, "");
     }
 
 
