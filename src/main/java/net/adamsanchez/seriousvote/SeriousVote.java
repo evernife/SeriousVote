@@ -515,13 +515,18 @@ public class SeriousVote
             if(hasLoot && !isNoRandom && randomRewardsNumber >= 1) {
                 for (int i = 0; i < randomRewardsNumber; i++) {
                     U.info("Choosing a random reward.");
-                    commandQueue.add(chooseReward(username, currentRewards));
+
+                    ArrayList<String> result = chooseReward(username, currentRewards);
+                    commandQueue.add(result.get(0));
+                    currentRewards = result.get(1);
                 }
             } else if(hasLoot && !isNoRandom){
                 randomRewardsGen = generateRandomRewardNumber();
                 for (int i = 0; i < randomRewardsGen; i++) {
                     U.info("Choosing a random reward.");
-                    commandQueue.add(chooseReward(username,currentRewards));
+                    ArrayList<String> result = chooseReward(username, currentRewards);
+                    commandQueue.add(result.get(0));
+                    currentRewards = result.get(1);
                 }
             }
 
@@ -582,16 +587,19 @@ public class SeriousVote
 
     }
     //Chooses 1 random reward
-    public String chooseReward(String username, String currentRewards) {
-
+    public ArrayList<String> chooseReward(String username, String currentRewards) {
+        ArrayList<String> result = new ArrayList<String>();
         Integer reward = chanceMap.get(ThreadLocalRandom.current().nextInt(0, chanceMap.size()));
         U.info("Chose Reward from Table" + reward.toString());
         List<Map<String,String>> commandList = lootMap.get(reward);
         Map<String, String> commandMap = commandList.get(ThreadLocalRandom.current().nextInt(0, commandList.size()));
         Map.Entry runCommand = Iterables.get(commandMap.entrySet(),0);
         //Get "Name of reward"
-        currentRewards += runCommand.getKey().toString() + " & ";
-        return parseVariables(runCommand.getValue().toString(), username);
+
+        result.add(parseVariables(runCommand.getValue().toString(), username));
+        result.add(currentRewards += runCommand.getKey().toString() + " & ");
+
+        return result;
 
     }
     public Text convertLink(String link){
