@@ -451,7 +451,10 @@ public class SeriousVote
                 String username = vote.getUsername();
                 U.info("Vote Registered From " + vote.getServiceName() + " for " + username);
 
-                giveVote(username);
+                String currentRewards = giveVote(username);
+                if (currentRewards != "offline"){
+                    broadCastMessage(publicMessage, username, currentRewards);
+                }
 
 
                 if (milestonesEnabled) {
@@ -471,8 +474,8 @@ public class SeriousVote
 
             broadCastMessage(publicMessage, username, "a bunch of things");
             event.getTargetEntity().sendMessage(Text.of("Thanks for voting! Here are your rewards!").toBuilder().color(TextColors.AQUA).build());
-
-            for(int ix = 0; ix < storedVotes.get(playerID).intValue(); ix ++){
+            int numberOfVotes = storedVotes.get(playerID).intValue();
+            for(int ix = 0; ix < numberOfVotes ; ix ++){
                 giveVote(username);
             }
 
@@ -508,7 +511,7 @@ public class SeriousVote
     }
 
 
-    public boolean giveVote(String username){
+    public String giveVote(String username){
 
         if (isOnline(username)) {
             String currentRewards = "";
@@ -535,7 +538,7 @@ public class SeriousVote
                 commandQueue.add(parseVariables(setCommand, username, currentRewards));
             }
 
-                broadCastMessage(publicMessage, username, currentRewards);
+                return currentRewards;
 
 
         }
@@ -566,10 +569,9 @@ public class SeriousVote
             }
 
 
-
+            return "offline";
         }
 
-        return true;
     }
     //Adds a reward(command) to the queue which is scheduled along with the main thread.
     //Bypass for Async NuVotifier
