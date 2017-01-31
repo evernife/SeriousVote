@@ -74,6 +74,7 @@ public class Milestones {
 
     public void addVote(UUID player){
         PlayerRecord record = getRecord(player);
+        String playerName;
         if(record == null){
             U.info("Creating a new record for " + player.toString() + ".");
             record = PlayerRecord.getBlankRecord(player);
@@ -82,6 +83,7 @@ public class Milestones {
             record.setVoteSpree(1);
             updateRecord(record);
         } else {
+            playerName  = U.getName(player);
             // If it's been a day since the last vote, increase the vote spree and change the lastvote
             if(new java.util.Date().getTime() - record.getLastVote().getTime() >= 86400000 ) {
                 //if it's been longer than a day then reset the voteSpree
@@ -89,18 +91,20 @@ public class Milestones {
                     record.setVoteSpree(1);
                     record.setLastVote(new Date(new java.util.Date().getTime()));
                     updateRecord(record);
-
+                    U.info(playerName  + " has voted and has " + record.getTotalVotes() + " total votes. Current Spree: " + record.getVoteSpree());
                     return;
                 }
                 record.setVoteSpree(record.getVoteSpree() + 1);
                 record.setLastVote(new Date(new java.util.Date().getTime()));
                 updateRecord(record);
-                checkForMilestones(record, U.getName(player));
+
+                checkForMilestones(record, playerName);
                 return;
             }
             record.setTotalVotes(record.getTotalVotes() + 1);
             //TODO make it tell the player how many days left till his next reward!
             updateRecord(record);
+
 
         }
     }
